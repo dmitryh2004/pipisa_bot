@@ -6,11 +6,12 @@ from settings import TOKEN
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_VERSION = 0.3
+BOT_VERSION = 0.4
 BOT_NAME = "pipisa_plus_bot"
 
 DATABASE_LOC = "database.json"
 USERNAME_DATABASE_LOC = "usernames.json"
+GROUP_DATABASE_LOC = "groupnames.json"
 
 ITEMS = {}
 ITEMS_LOC = {}
@@ -20,6 +21,8 @@ ITEMS_MIN_VALUE = {}
 ITEMS_MAX_VALUE = {}
 ITEMS_START_VALUE = {}
 ITEMS_SORT_DIRECTION = {}  # True - по убыванию, False - по возрастанию
+
+PIE_CHART_COLORS = ['royalblue', 'orangered', 'mediumspringgreen', 'blueviolet', 'orange', 'lightblue', 'lightcoral', 'lightgreen', 'magenta', 'yellow', 'lightgray']
 
 
 def read_config(filepath):
