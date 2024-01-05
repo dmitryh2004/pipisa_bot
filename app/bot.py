@@ -11,10 +11,13 @@ from config import *
 from app.dialogs import msg
 from database import databaseEntity as db
 from database import usernameDatabaseEntity as udb
+from database import groupsDatabaseEntity as gdb
 
 import random
 
 import datetime
+
+import os
 
 
 bot = Bot(token=TOKEN)
@@ -29,12 +32,13 @@ def autosave_dbs():
     current_time = datetime.datetime.now()
     if (current_time - last_save_time).total_seconds() > 300.0:  # 5 минут
         db.saveDatabase(config.DATABASE_LOC)
-        udb.saveDatabase(config.USERNAME_DATABASE_LOC)
+        udb.saveDatabase()
+        gdb.saveDatabase()
         last_save_time = current_time
 
 
 def build_top_10(group, item):
-    raw_text = db.get_top_10(group, item)
+    raw_text = db.get_top(group, item, amount=10)
     string = ""
     total = 0
     for entry in raw_text:
@@ -67,6 +71,7 @@ def change_dimension(group, user, item):
 async def handle_message(message: types.message.Message):
     text = message.text
     group = message.chat.id
+    group_name = message.chat.full_name
     user_name = message.from_user.first_name
     user_id = message.from_user.id
     thread = message.message_thread_id if message.is_topic_message else None
@@ -80,6 +85,7 @@ async def handle_message(message: types.message.Message):
         await bot.send_message(group, msg.help, thread)
     else:
         # добавить имя юзера в базу данных юзернеймов
+        gdb.append(str(group), str(group_name))
         udb.append(str(user_id), str(user_name))
         if text == "/make_turn":
             dim = db.getCurrent(str(group), str(user_id))
@@ -111,6 +117,11 @@ async def handle_message(message: types.message.Message):
             dim = db.getCurrent(str(group), str(user_id))
             top10 = build_top_10(str(group), dim)
             await bot.send_message(group, msg.top10_current.format(item=ITEMS_LOC[dim], top10=top10), thread)
+        elif text == "/top10_current_png":
+            dim = db.getCurrent(str(group), str(user_id))
+            img_path = aiogram.types.FSInputFile(db.form_piechart_top_10(str(group), dim))
+            await bot.send_photo(group, img_path, thread)
+            # await bot.send_message(group, msg.top10_current_png.format(item=ITEMS_LOC[dim]), thread)
         else:
             await bot.send_message(group, msg.unknown, thread)
         autosave_dbs()
@@ -127,6 +138,8 @@ async def callback_handler(c):
             thread = message.message_thread_id if message.is_topic_message else None
             db.setCurrent(str(group), str(user_id), c.data)
             current = db.getDimension(str(group), str(user_id), db.getCurrent(str(group), str(user_id)))
+            if current is None:
+                current = 0
             await bot.send_message(group, msg.switch_confirm.format(name=user_name, item=ITEMS_LOC[c.data], current=current), thread)
 
 
@@ -135,4 +148,9 @@ async def on_shutdown():
     logging.warning('Shutting down..')
     # выгрузка базы данных
     db.saveDatabase(config.DATABASE_LOC)
-    udb.saveDatabase(config.USERNAME_DATABASE_LOC)
+    udb.saveDatabase()
+    gdb.saveDatabase()
+    # удалить все сгенерированные файлы
+    generated_dir = 'generated'
+    for f in os.listdir(generated_dir):
+        os.remove(os.path.join(generated_dir, f))
