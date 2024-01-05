@@ -2,9 +2,10 @@ import json
 import logging
 import math
 
+from settings import TOKEN
+
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "1"
 BOT_VERSION = 0.3
 BOT_NAME = "pipisa_plus_bot"
 
