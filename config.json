@@ -1,13 +1,13 @@
 {
 	"dick": {
 		"loc": "Пенис",
-		"min_offset": "-10",
+		"min_offset": "-5",
 		"max_offset": "10",
 		"start_value": "0"
 	},
 	"duck": {
 		"loc": "Утка",
-		"min_offset": "-10",
+		"min_offset": "-5",
 		"max_offset": "10",
 		"min_value": "0",
 		"start_value": "0"

@@ -6,7 +6,7 @@ from settings import TOKEN
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_VERSION = 0.4
+BOT_VERSION = 0.5
 BOT_NAME = "pipisa_plus_bot"
 
 DATABASE_LOC = "database.json"
@@ -41,7 +41,7 @@ def read_config(filepath):
         if "min_offset" in content[item]:
             ITEMS_MIN_OFFSET[str(total)] = int(content[item]["min_offset"])
         else:
-            ITEMS_MIN_OFFSET[str(total)] = -10
+            ITEMS_MIN_OFFSET[str(total)] = -5
             
         if "max_offset" in content[item]:
             ITEMS_MAX_OFFSET[str(total)] = int(content[item]["max_offset"])
