@@ -27,16 +27,6 @@ dp = Dispatcher()
 last_save_time = datetime.datetime.now()
 
 
-def autosave_dbs():
-    global last_save_time
-    current_time = datetime.datetime.now()
-    if (current_time - last_save_time).total_seconds() > 300.0:  # 5 минут
-        db.saveDatabase(config.DATABASE_LOC)
-        udb.saveDatabase()
-        gdb.saveDatabase()
-        last_save_time = current_time
-
-
 def build_top_10(group, item):
     raw_text = db.get_top(group, item, amount=10)
     string = ""
@@ -121,10 +111,8 @@ async def handle_message(message: types.message.Message):
             dim = db.getCurrent(str(group), str(user_id))
             img_path = aiogram.types.FSInputFile(db.form_piechart_top_10(str(group), dim))
             await bot.send_photo(group, img_path, thread)
-            # await bot.send_message(group, msg.top10_current_png.format(item=ITEMS_LOC[dim]), thread)
         else:
             await bot.send_message(group, msg.unknown, thread)
-        autosave_dbs()
 
 
 @dp.callback_query(lambda c: True)
