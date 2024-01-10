@@ -1,3 +1,4 @@
+import datetime
 import os
 import logging
 import json
@@ -5,24 +6,6 @@ import traceback
 import matplotlib.pyplot as plt
 
 import config
-
-'''
-# Данные для диаграммы
-labels = ['A', 'B', 'C', 'D']
-sizes = [25, 30, 20, 25]
-
-# Создание круговой диаграммы
-plt.pie(sizes, labels=labels, autopct='%1.1f%%')
-
-# Добавление легенды
-plt.legend()
-
-# Сохранение диаграммы в файл png
-plt.savefig('pie_chart.png')
-
-# Отображение диаграммы
-plt.show()
-'''
 
 
 class NameDatabase:
@@ -72,18 +55,25 @@ class Database:
         self.readDatabase(config.DATABASE_LOC)
 
     def checkForNonExistingUser(self, group, user):
-        if not(group in self.database):
+        if not (group in self.database):
             self.database[group] = dict()
             logging.warning("Added new group. Database's state: " + str(self.database))
-        if not(user in self.database[group]):
+        if not (user in self.database[group]):
             self.database[group][user] = dict()
             self.database[group][user]["current"] = "1"
             logging.warning("Added new user. Database's state: " + str(self.database))
 
+    def checkForExistingAttempts(self, group, user):
+        self.checkForNonExistingUser(group, user)
+        if not ("attempts" in self.database[group][user]):
+            self.database[group][user]["attempts"] = dict()
+            for item in config.ITEMS:
+                self.database[group][user]["attempts"][item] = str(datetime.datetime(2000, 1, 1))
+
     def getDimension(self, group, user, item):
         try:
             self.checkForNonExistingUser(group, user)
-            value = None
+            value = config.ITEMS_START_VALUE[item]
             if item in self.database[group][user]:
                 value = self.database[group][user][item]
             return value
@@ -95,6 +85,32 @@ class Database:
         try:
             self.checkForNonExistingUser(group, user)
             self.database[group][user][item] = value
+        except Exception as e:
+            logging.error("An unknown error occured.\nException info is printed below.")
+            logging.error(traceback.format_exc())
+
+    def getLastAttempt(self, group, user, item):
+        try:
+            self.checkForNonExistingUser(group, user)
+            self.checkForExistingAttempts(group, user)
+            attempt: datetime.datetime = datetime.datetime(2000, 1, 1)
+            if "attempts" in self.database[group][user]:
+                if item in self.database[group][user]["attempts"]:
+                    attempt = datetime.datetime.strptime(self.database[group][user]["attempts"][item],
+                                                         "%Y-%m-%d %H:%M:%S")
+            return attempt
+        except Exception as e:
+            logging.error("An unknown error occured.\nException info is printed below.")
+            logging.error(traceback.format_exc())
+
+    def setLastAttempt(self, group, user, item):
+        try:
+            self.checkForNonExistingUser(group, user)
+            self.checkForExistingAttempts(group, user)
+            attempt: datetime.datetime = datetime.datetime.now().replace(microsecond=0)
+            if "attempts" in self.database[group][user]:
+                if item in self.database[group][user]["attempts"]:
+                    self.database[group][user]["attempts"][item] = str(attempt)
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -121,7 +137,8 @@ class Database:
         for user in self.database[group]:
             dim = self.getDimension(group, user, item)
             if dim is not None:
-                dimensions.append((dim, usernameDatabaseEntity.getUsername(user) if usernameDatabaseEntity.getUsername(user) else user))
+                dimensions.append((dim, usernameDatabaseEntity.getUsername(user) if usernameDatabaseEntity.getUsername(
+                    user) else user))
         dimensions.sort(reverse=config.ITEMS_SORT_DIRECTION[item])
         if amount is not None:
             return dimensions[:amount]

@@ -6,7 +6,7 @@ from settings import TOKEN
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_VERSION = 0.5
+BOT_VERSION = 0.6
 BOT_NAME = "pipisa_plus_bot"
 
 DATABASE_LOC = "database.json"
@@ -21,6 +21,7 @@ ITEMS_MIN_VALUE = {}
 ITEMS_MAX_VALUE = {}
 ITEMS_START_VALUE = {}
 ITEMS_SORT_DIRECTION = {}  # True - по убыванию, False - по возрастанию
+ITEMS_TIME_INTERVAL = {}
 
 PIE_CHART_COLORS = ['royalblue', 'orangered', 'mediumspringgreen', 'blueviolet', 'orange', 'lightblue', 'lightcoral', 'lightgreen', 'magenta', 'yellow', 'lightgray']
 
@@ -67,6 +68,11 @@ def read_config(filepath):
             ITEMS_SORT_DIRECTION[str(total)] = False
         else:
             ITEMS_SORT_DIRECTION[str(total)] = True
+
+        if "time_interval" in content[item]:
+            ITEMS_TIME_INTERVAL[str(total)] = int(content[item]["time_interval"])
+        else:
+            ITEMS_TIME_INTERVAL[str(total)] = 24
 
 
 read_config("config.json")
