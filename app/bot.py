@@ -79,15 +79,27 @@ async def handle_message(message: types.message.Message):
         udb.append(str(user_id), str(user_name))
         if text == "/make_turn":
             dim = db.getCurrent(str(group), str(user_id))
-            current, offset = change_dimension(str(group), str(user_id), dim)
-            offset_sign = ""
-            offset_val = abs(offset)
-            if offset >= 0:
-                offset_sign = "увеличилось"
+            current_time = datetime.datetime.now()
+            last_attempt = db.getLastAttempt(str(group), str(user_id), dim)
+            diff = current_time - last_attempt
+            # для дебага времени (если будет нужен)
+            # logging.info(f"current: {str(current_time)}\nlast: {str(last_attempt)}\ndiff: {str(diff)}\nhours: {int(diff.total_seconds()) // 3600}")
+            if (diff.total_seconds() // 3600) >= config.ITEMS_TIME_INTERVAL[dim]:
+                current, offset = change_dimension(str(group), str(user_id), dim)
+                offset_sign = ""
+                offset_val = abs(offset)
+                if offset >= 0:
+                    offset_sign = "увеличилось"
+                else:
+                    offset_sign = "уменьшилось"
+                db.setLastAttempt(str(group), str(user_id), dim)
+                await bot.send_message(group, msg.make_turn.format(name=user_name, dimension=ITEMS_LOC[dim], offset_sign=offset_sign,
+                                                          offset_val=offset_val, current=current), thread)
             else:
-                offset_sign = "уменьшилось"
-            await bot.send_message(group, msg.make_turn.format(name=user_name, dimension=ITEMS_LOC[dim], offset_sign=offset_sign,
-                                                      offset_val=offset_val, current=current), thread)
+                nextAttempt = last_attempt + datetime.timedelta(hours=config.ITEMS_TIME_INTERVAL[dim])
+                await bot.send_message(group, msg.make_turn_too_fast.format(name=user_name, dimension=ITEMS_LOC[dim],
+                                                                            current=db.getDimension(str(group), str(user_id), dim),
+                                                                            next_time=nextAttempt.strftime("%d.%m.%Y в %H:%M:%S")), thread)
         elif text == "/current":
             dim = db.getCurrent(str(group), str(user_id))
             await bot.send_message(group, msg.current_dimension.format(name=user_name, item=ITEMS_LOC[dim],
