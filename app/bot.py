@@ -121,8 +121,11 @@ async def handle_message(message: types.message.Message):
             await bot.send_message(group, msg.top10_current.format(item=ITEMS_LOC[dim], top10=top10), thread)
         elif text == "/top10_current_png":
             dim = db.getCurrent(str(group), str(user_id))
-            img_path = aiogram.types.FSInputFile(db.form_piechart_top_10(str(group), dim))
-            await bot.send_photo(group, img_path, thread)
+            if not config.ITEMS_SORT_DIRECTION[dim]:
+                await bot.send_message(group, msg.top10_current_png_unable.format(item=ITEMS_LOC[dim]), thread)
+            else:
+                img_path = aiogram.types.FSInputFile(db.form_piechart_top_10(str(group), dim))
+                await bot.send_photo(group, img_path, thread)
         else:
             await bot.send_message(group, msg.unknown, thread)
 
