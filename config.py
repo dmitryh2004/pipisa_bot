@@ -6,7 +6,7 @@ from settings import TOKEN
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_VERSION = 0.6
+BOT_VERSION = 0.7
 BOT_NAME = "pipisa_plus_bot"
 
 DATABASE_LOC = "database.json"

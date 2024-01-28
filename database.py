@@ -152,6 +152,8 @@ class Database:
         sizes = []
         total = 0
         for size, label in topall:  # создаем легенду и размеры
+            if size <= 0:
+                break
             total += 1
             if total <= 10:
                 labels.append(label[:13] + "..." if len(label) > 13 else label)
@@ -170,6 +172,7 @@ class Database:
         ax.pie(sizes, autopct='%1.1f%%', colors=config.PIE_CHART_COLORS, startangle=45, pctdistance=0.8)
         ax.set_title(f"Группа {group_name}, измерение {config.ITEMS_LOC[item]}\nСоздано ботом @{config.BOT_NAME}")
         ax.legend(labels, loc="center left", bbox_to_anchor=(0.9, 0, 0.5, 1))
+        plt.tight_layout()
 
         file_path = f"generated\\{group}_{item}.png"
         plt.savefig(file_path)
