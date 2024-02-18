@@ -10,18 +10,19 @@ AUTOSAVE_INTERVAL = 300  # 5 минут
 
 
 def save():
-    logging.warning('Autosaving...')
+    logging.info('Autosaving...')
     # выгрузка базы данных
     bot.db.saveDatabase(config.DATABASE_LOC)
     bot.udb.saveDatabase()
     bot.gdb.saveDatabase()
-    logging.warning('Autosaving successful.')
+    bot.pdb.saveDatabase()
+    logging.info('Autosaving successful.')
     # удалить все сгенерированные файлы
-    logging.warning('Deleting generated files...')
+    logging.info('Deleting generated files...')
     generated_dir = 'generated'
     for f in os.listdir(generated_dir):
         os.remove(os.path.join(generated_dir, f))
-    logging.warning('Deletion complete.')
+    logging.info('Deletion complete.')
 
 
 async def autosave() -> None:  # автосохранение, удаление сгенерированных файлов
