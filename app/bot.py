@@ -21,6 +21,20 @@ import datetime
 import os
 
 
+total_emojis = {
+    1: "\U0001F947",
+    2: "\U0001F948",
+    3: "\U0001F949",
+    4: "\U00000034\U0000FE0F\U000020E3",
+    5: "\U00000035\U0000FE0F\U000020E3",
+    6: "\U00000036\U0000FE0F\U000020E3",
+    7: "\U00000037\U0000FE0F\U000020E3",
+    8: "\U00000038\U0000FE0F\U000020E3",
+    9: "\U00000039\U0000FE0F\U000020E3",
+    10: "\U0001F51F"
+}
+
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
@@ -34,7 +48,7 @@ def build_top_10(group, item):
     total = 0
     for entry in raw_text:
         total += 1
-        string += f"{total} | {entry[1]} - {entry[0]} см.\n"
+        string += f"{total_emojis[total]} | {entry[1]} - {entry[0]} см.\n"
     return string
 
 
@@ -90,13 +104,16 @@ async def handle_message(message: types.message.Message):
             if (diff.total_seconds() // 3600) >= config.ITEMS_TIME_INTERVAL[dim]:
                 current, offset = change_dimension(str(group), str(user_id), dim)
                 offset_sign = ""
+                smile = ""
                 offset_val = abs(offset)
                 if offset >= 0:
                     offset_sign = "увеличилось"
+                    smile = "\U0001F4C8"
                 else:
                     offset_sign = "уменьшилось"
+                    smile = "\U0001F4C9"
                 db.setLastAttempt(str(group), str(user_id), dim)
-                await bot.send_message(group, msg.make_turn.format(name=user_name, dimension=ITEMS_LOC[dim], offset_sign=offset_sign,
+                await bot.send_message(group, msg.make_turn.format(smile=smile, name=user_name, dimension=ITEMS_LOC[dim], offset_sign=offset_sign,
                                                           offset_val=offset_val, current=current), thread)
             else:
                 nextAttempt = last_attempt + datetime.timedelta(hours=config.ITEMS_TIME_INTERVAL[dim])

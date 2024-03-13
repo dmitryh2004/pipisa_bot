@@ -145,7 +145,7 @@ class PromoDatabase:
                 return self.database[entry]["min_role"]
 
 
-promoDatabaseEntity = PromoDatabase("promos.json")
+promoDatabaseEntity = PromoDatabase(config.PROMO_DATABASE_LOC)
 
 
 class Database:
