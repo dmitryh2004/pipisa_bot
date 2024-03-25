@@ -32,7 +32,7 @@ async def autosave() -> None:  # автосохранение, удаление 
 
 
 async def run_bot() -> None:  # сам бот
-    await bot.dp.start_polling(bot.bot)
+    await bot.dp.start_polling(bot.bot, polling_timeout=24*60*60)
     bot.dp.stop_polling()
     await bot.dp.wait_closed()
     await bot.bot.close()
