@@ -1,0 +1,39 @@
+{
+	"dick": {
+		"loc": "Пенис",
+		"min_offset": "-5",
+		"max_offset": "10",
+		"start_value": "0"
+	},
+	"duck": {
+		"loc": "Утка",
+		"min_offset": "-5",
+		"max_offset": "10",
+		"min_value": "0",
+		"start_value": "0",
+		"time_interval": "12"
+	},
+	"height": {
+		"loc": "Рост",
+		"min_offset": "0",
+		"max_offset": "2",
+		"start_value": "0"
+	},
+	"pencil length": {
+		"loc": "Длина карандаша",
+		"min_offset": "-1",
+		"max_offset": "0",
+		"start_value": "100",
+		"min_value": "0",
+		"reverse_sort": "1",
+		"time_interval": "1"
+	},
+	"bad code length": {
+		"loc": "Длина плохого кода",
+		"min_offset": "-4",
+		"max_offset": "20",
+		"start_value": "0",
+		"min_value": "0",
+		"time_interval": "12"
+	}
+}
