@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_VERSION = "0.9"
 BOT_NAME = "pipisa_plus_bot"
-DEBUG = True
+DEBUG = False
 DEBUG_GROUPS = SETTINGS_DEBUG_GROUPS
 
 DATABASE_LOC = r"./database/database.db"
