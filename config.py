@@ -2,17 +2,16 @@ import json
 import logging
 import math
 
-from settings import TOKEN
+from settings import TOKEN, DEBUG_GROUPS as SETTINGS_DEBUG_GROUPS
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_VERSION = "0.8.2"
+BOT_VERSION = "0.9"
 BOT_NAME = "pipisa_plus_bot"
+DEBUG = True
+DEBUG_GROUPS = SETTINGS_DEBUG_GROUPS
 
-DATABASE_LOC = r"./database/database.json"
-PROMO_DATABASE_LOC = r"./database/promos.json"
-USERNAME_DATABASE_LOC = r"./database/usernames.json"
-GROUP_DATABASE_LOC = r"./database/groupnames.json"
+DATABASE_LOC = r"./database/database.db"
 
 ITEMS = {}
 ITEMS_LOC = {}
@@ -33,6 +32,11 @@ ROLES = {
     3: ("\U0001F48E\U0001F396 Главный админ", "Роль разработчика бота.\nОсобенности:\n- доступны промокоды, недоступные остальным игрокам;\n- может создавать новые промокоды;\n- может выдавать роли другим игрокам (до Админа включительно).\n\nПодробную информацию можно узнать через команду /developer_features в личных сообщениях.")
 }
 
+BAN_REASONS = {
+    "0": "Причина не указана",
+    "1": "Спам, флуд"
+}
+
 
 def read_config(filepath):
     """
@@ -46,46 +50,46 @@ def read_config(filepath):
     total = 0
     for item in content:
         total += 1
-        ITEMS[str(total)] = item
+        ITEMS[total] = item
         if "loc" in content[item]:
-            ITEMS_LOC[str(total)] = content[item]["loc"]
+            ITEMS_LOC[total] = content[item]["loc"]
         else:
-            ITEMS_LOC[str(total)] = item
+            ITEMS_LOC[total] = item
         
         if "min_offset" in content[item]:
-            ITEMS_MIN_OFFSET[str(total)] = int(content[item]["min_offset"])
+            ITEMS_MIN_OFFSET[total] = int(content[item]["min_offset"])
         else:
-            ITEMS_MIN_OFFSET[str(total)] = -5
+            ITEMS_MIN_OFFSET[total] = -5
             
         if "max_offset" in content[item]:
-            ITEMS_MAX_OFFSET[str(total)] = int(content[item]["max_offset"])
+            ITEMS_MAX_OFFSET[total] = int(content[item]["max_offset"])
         else:
-            ITEMS_MAX_OFFSET[str(total)] = 10
+            ITEMS_MAX_OFFSET[total] = 10
 
         if "min_value" in content[item]:
-            ITEMS_MIN_VALUE[str(total)] = int(content[item]["min_value"])
+            ITEMS_MIN_VALUE[total] = int(content[item]["min_value"])
         else:
-            ITEMS_MIN_VALUE[str(total)] = -math.inf
+            ITEMS_MIN_VALUE[total] = -math.inf
 
         if "max_value" in content[item]:
-            ITEMS_MAX_VALUE[str(total)] = int(content[item]["max_value"])
+            ITEMS_MAX_VALUE[total] = int(content[item]["max_value"])
         else:
-            ITEMS_MAX_VALUE[str(total)] = math.inf
+            ITEMS_MAX_VALUE[total] = math.inf
 
         if "start_value" in content[item]:
-            ITEMS_START_VALUE[str(total)] = int(content[item]["start_value"])
+            ITEMS_START_VALUE[total] = int(content[item]["start_value"])
         else:
-            ITEMS_START_VALUE[str(total)] = 0
+            ITEMS_START_VALUE[total] = 0
 
         if "reverse_sort" in content[item]:
-            ITEMS_SORT_DIRECTION[str(total)] = False
+            ITEMS_SORT_DIRECTION[total] = False
         else:
-            ITEMS_SORT_DIRECTION[str(total)] = True
+            ITEMS_SORT_DIRECTION[total] = True
 
         if "time_interval" in content[item]:
-            ITEMS_TIME_INTERVAL[str(total)] = int(content[item]["time_interval"])
+            ITEMS_TIME_INTERVAL[total] = int(content[item]["time_interval"])
         else:
-            ITEMS_TIME_INTERVAL[str(total)] = 24
+            ITEMS_TIME_INTERVAL[total] = 24
 
 
 read_config("config.json")

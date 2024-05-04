@@ -14,13 +14,13 @@ def save():
     Функция для сохранения баз данных бота
     :return: none
     """
-    logging.info('Autosaving...')
+    '''logging.info('Autosaving...')
     # выгрузка базы данных
     bot.db.saveDatabase(config.DATABASE_LOC)
     bot.udb.saveDatabase()
     bot.gdb.saveDatabase()
     bot.pdb.saveDatabase()
-    logging.info('Autosaving successful.')
+    logging.info('Autosaving successful.')'''
     # удалить все сгенерированные файлы
     logging.info('Deleting generated files...')
     generated_dir = 'generated'
@@ -62,4 +62,8 @@ if __name__ == "__main__":
         pass
     except KeyboardInterrupt:
         save()
+        bot.gdb.closeDatabase()
+        bot.udb.closeDatabase()
+        bot.pdb.closeDatabase()
+        bot.db.closeDatabase()
         logging.warning("Bot stopped by keyboard interrupt")

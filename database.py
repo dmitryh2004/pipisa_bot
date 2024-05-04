@@ -1,10 +1,10 @@
 import datetime
 import os
 import logging
-import json
 import traceback
 import matplotlib.pyplot as plt
 import pytz
+import sqlite3
 
 import config
 
@@ -13,37 +13,25 @@ class NameDatabase:
     """
     Класс базы данных с названиями групп
     """
-    database = dict()
     location = ""
 
     def __init__(self, location):
         self.location = location
-        self.readDatabase(self.location)
-
-    def readDatabase(self, location):
-        """
-        Чтение базы данных групп
-        :param location: путь к базе данных групп
-        :return: none
-        """
         try:
-            with open(location, "r", encoding="utf-8") as file:
-                self.database = json.load(file)
-        except FileNotFoundError:
-            logging.error(f"Database {location} not found!")
+            self.connection = sqlite3.connect(location)
+            self.cursor = self.connection.cursor()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
 
-    def saveDatabase(self):
+    def closeDatabase(self):
         """
         Сохраняет базу данных групп
         :return: none
         """
         try:
-            with open(self.location, "w", encoding="utf-8") as file:
-                json.dump(self.database, file)
-                logging.info(f"Database {self.location} uploaded successfully.")
+            self.cursor.close()
+            self.connection.close()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -55,7 +43,10 @@ class NameDatabase:
         :param group_name: Название группы
         :return: none
         """
-        self.database[str(group_id)] = group_name
+        insert_query = "INSERT OR REPLACE INTO groupnames (group_id, group_name) VALUES (?, ?)"
+        data = (group_id, group_name)
+        self.cursor.execute(insert_query, data)
+        self.connection.commit()
 
     def getName(self, group_id):
         """
@@ -63,49 +54,43 @@ class NameDatabase:
         :param group_id: ИД группы
         :return: название группы
         """
-        for entry in self.database:
-            if entry == str(group_id):
-                return self.database[entry]
+        select_query = "SELECT group_name FROM groupnames WHERE group_id = (?)"
+        self.cursor.execute(select_query, (group_id, ))
+        return self.cursor.fetchone()[0]
+
+    def hasGroup(self, group_id):
+        select_query = "SELECT * FROM groupnames WHERE group_id = (?)"
+        self.cursor.execute(select_query, (group_id,))
+        res = self.cursor.fetchone()
+        return res is not None
 
 
-groupsDatabaseEntity = NameDatabase(config.GROUP_DATABASE_LOC)
+groupsDatabaseEntity = NameDatabase(config.DATABASE_LOC)
 
 
 class UserDatabase:
     """
     Класс базы данных о пользователях: их именах и ролях
     """
-    database = dict()
     location = ""
 
     def __init__(self, location):
         self.location = location
-        self.readDatabase(self.location)
-
-    def readDatabase(self, location):
-        """
-        Чтение базы данных пользователей
-        :param location: путь к файлу базы данных пользователей
-        :return: none
-        """
         try:
-            with open(location, "r", encoding="utf-8") as file:
-                self.database = json.load(file)
-        except FileNotFoundError:
-            logging.error(f"Database {location} not found!")
+            self.connection = sqlite3.connect(location)
+            self.cursor = self.connection.cursor()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
 
-    def saveDatabase(self):
+    def closeDatabase(self):
         """
         Сохраняет базу данных групп
         :return: none
         """
         try:
-            with open(self.location, "w", encoding="utf-8") as file:
-                json.dump(self.database, file)
-                logging.info(f"Database {self.location} uploaded successfully.")
+            self.cursor.close()
+            self.connection.close()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -118,10 +103,10 @@ class UserDatabase:
         :param role: Роль пользователя
         :return: none
         """
-        if not (str(user_id) in self.database):
-            self.database[str(user_id)] = dict()
-        self.database[str(user_id)]["name"] = user_name
-        self.database[str(user_id)]["role"] = role
+        insert_query = "INSERT OR REPLACE INTO usernames (user_id, username, role) VALUES (?, ?, ?)"
+        data = (user_id, user_name, role)
+        self.cursor.execute(insert_query, data)
+        self.connection.commit()
 
     def getUsername(self, user_id):
         """
@@ -129,9 +114,9 @@ class UserDatabase:
         :param user_id: ИД пользователя
         :return: Имя пользователя
         """
-        for entry in self.database:
-            if entry == str(user_id):
-                return self.database[entry]["name"]
+        select_query = "SELECT username FROM usernames WHERE user_id = (?)"
+        self.cursor.execute(select_query, (user_id,))
+        return self.cursor.fetchone()[0]
 
     def getUserRole(self, user_id):
         """
@@ -139,52 +124,55 @@ class UserDatabase:
         :param user_id: ИД пользователя
         :return: Роль пользователя
         """
-        print(self.database)
-        for entry in self.database:
-            if entry == str(user_id):
-                print(self.database[entry])
-                return int(self.database[entry]["role"])
-        return 0
+        select_query = "SELECT role FROM usernames WHERE user_id = (?)"
+        self.cursor.execute(select_query, (user_id,))
+        return self.cursor.fetchone()[0]
+
+    def hasUser(self, user_id):
+        select_query = "SELECT * FROM usernames WHERE user_id = (?)"
+        self.cursor.execute(select_query, (user_id,))
+        res = self.cursor.fetchone()
+        return res is not None
+
+    def getTesters(self):
+        select_query = "SELECT * FROM usernames WHERE role >= 1"
+        self.cursor.execute(select_query)
+        res = self.cursor.fetchall()
+        return res
+
+    def getAdmins(self):
+        select_query = "SELECT * FROM usernames WHERE role >= 2"
+        self.cursor.execute(select_query)
+        res = self.cursor.fetchall()
+        return res
 
 
-usernameDatabaseEntity = UserDatabase(config.USERNAME_DATABASE_LOC)
+usernameDatabaseEntity = UserDatabase(config.DATABASE_LOC)
 
 
 class PromoDatabase:
     """
     Класс базы данных промокодов
     """
-    database = dict()
     location = ""
 
     def __init__(self, location):
         self.location = location
-        self.readDatabase(self.location)
-
-    def readDatabase(self, location):
-        """
-        Чтение базы данных пользователей
-        :param location: путь к файлу базы данных пользователей
-        :return: none
-        """
         try:
-            with open(location, "r", encoding="utf-8") as file:
-                self.database = json.load(file)
-        except FileNotFoundError:
-            logging.error(f"Database {location} not found!")
+            self.connection = sqlite3.connect(location)
+            self.cursor = self.connection.cursor()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
 
-    def saveDatabase(self):
+    def closeDatabase(self):
         """
         Сохраняет базу данных групп
         :return: none
         """
         try:
-            with open(self.location, "w", encoding="utf-8") as file:
-                json.dump(self.database, file)
-                logging.info(f"Database {self.location} uploaded successfully.")
+            self.cursor.close()
+            self.connection.close()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -198,22 +186,22 @@ class PromoDatabase:
         :param min_role: минимальная роль, необходимая для использования
         :return: none
         """
-        if not (str(promo_id) in self.database):
-            self.database[str(promo_id)] = dict()
-        self.database[str(promo_id)]["bonus"] = bonus_size
-        self.database[str(promo_id)]["max_uses"] = max_uses
-        self.database[str(promo_id)]["min_role"] = min_role
+        insert_query = "INSERT OR REPLACE INTO promos (promo, bonus, max_uses, min_role) VALUES (?, ?, ?, ?)"
+        data = (promo_id, bonus_size, max_uses, min_role)
+        self.cursor.execute(insert_query, data)
+        self.connection.commit()
 
     def getPromos(self):
         """
         Возвращает список всех промокодов из базы данных
         :return: строка с информацией о всех промокодах
         """
+        select_query = "SELECT * FROM promos"
+        self.cursor.execute(select_query)
         res = []
-        for key in self.database:
-            value = self.database[key]
-            temp = f"{key}: бонус - {value['bonus']}, максимальное число использований - {value['max_uses']}," \
-                   f" минимальная роль для использования - {config.ROLES[value['min_role']][0]}"
+        for entry in self.cursor.fetchall():
+            temp = f"{entry[0]}: бонус - {entry[1]}, максимальное число использований - {entry[2]}," \
+                   f" минимальная роль для использования - {config.ROLES[entry[3]][0]}"
             res.append(temp)
         return "\n".join(res)
 
@@ -223,9 +211,9 @@ class PromoDatabase:
         :param promo_id: ID промокода
         :return: бонус промокода
         """
-        for entry in self.database:
-            if entry == str(promo_id):
-                return self.database[entry]["bonus"]
+        select_query = "SELECT bonus FROM promos WHERE promo = (?)"
+        self.cursor.execute(select_query, (promo_id, ))
+        return self.cursor.fetchone()[0]
 
     def getPromoMaxUses(self, promo_id):
         """
@@ -233,9 +221,9 @@ class PromoDatabase:
         :param promo_id: ID промокода
         :return: максимальное число использований промокода
         """
-        for entry in self.database:
-            if entry == str(promo_id):
-                return self.database[entry]["max_uses"]
+        select_query = "SELECT max_uses FROM promos WHERE promo = (?)"
+        self.cursor.execute(select_query, (promo_id,))
+        return self.cursor.fetchone()[0]
 
     def getPromoMinRole(self, promo_id):
         """
@@ -243,12 +231,18 @@ class PromoDatabase:
         :param promo_id: ID промокода
         :return: минимальная роль, необходимая для использования
         """
-        for entry in self.database:
-            if entry == str(promo_id):
-                return self.database[entry]["min_role"]
+        select_query = "SELECT min_role FROM promos WHERE promo = (?)"
+        self.cursor.execute(select_query, (promo_id,))
+        return self.cursor.fetchone()[0]
+
+    def hasPromo(self, promo_id):
+        select_query = "SELECT * FROM promos WHERE promo = (?)"
+        self.cursor.execute(select_query, (promo_id,))
+        res = self.cursor.fetchone()
+        return res is not None
 
 
-promoDatabaseEntity = PromoDatabase(config.PROMO_DATABASE_LOC)
+promoDatabaseEntity = PromoDatabase(config.DATABASE_LOC)
 
 
 class Database:
@@ -257,8 +251,14 @@ class Database:
     """
     database = dict()
 
-    def __init__(self):
-        self.readDatabase(config.DATABASE_LOC)
+    def __init__(self, location):
+        self.location = location
+        try:
+            self.connection = sqlite3.connect(location)
+            self.cursor = self.connection.cursor()
+        except Exception as e:
+            logging.error("An unknown error occured.\nException info is printed below.")
+            logging.error(traceback.format_exc())
 
     def checkForNonExistingUser(self, group, user):
         """
@@ -267,25 +267,30 @@ class Database:
         :param user: Пользователь, которого надо проверить
         :return: none
         """
-        if not (group in self.database):
-            self.database[group] = dict()
-            logging.info("Added new group. Database's state: " + str(self.database))
-        if not (user in self.database[group]):
-            self.database[group][user] = dict()
-            self.database[group][user]["current"] = "1"
-            self.database[group][user]["promo_usages"] = dict()
-            logging.info("Added new user. Database's state: " + str(self.database))
+        currents_insert_query = "INSERT OR IGNORE INTO currents VALUES (?, ?, ?)"
+        self.cursor.execute(currents_insert_query, (group, user, 1))
+        for dim in config.ITEMS:
+            dimensions_insert_query = "INSERT OR IGNORE INTO dimensions VALUES (?, ?, ?, ?)"
+            self.cursor.execute(dimensions_insert_query, (group, user, dim, config.ITEMS_START_VALUE[dim]))
+            bonuses_insert_query = "INSERT OR IGNORE INTO bonuses VALUES (?, ?, ?, ?)"
+            self.cursor.execute(bonuses_insert_query, (group, user, dim, 0))
+            attempts_insert_query = "INSERT OR IGNORE INTO attempts VALUES (?, ?, ?, ?)"
+            default_last_attempt = str(datetime.datetime(2000, 1, 1))
+            self.cursor.execute(attempts_insert_query, (group, user, dim, default_last_attempt))
+        self.connection.commit()
 
-    def checkForExistingPromoUsages(self, group, user):
+    def checkForExistingPromoUsages(self, group, user, promo):
         """
         Проверка на существующую информацию о промокодах, использованных пользователем в группе
         :param group: Группа, которую надо проверить
         :param user: Пользователь, которого надо проверить
+        :param promo: Проверяемый промокод
         :return: none
         """
         self.checkForNonExistingUser(group, user)
-        if not ("promo_usages" in self.database[group][user]):
-            self.database[group][user]["promo_usages"] = dict()
+        promo_usages_insert_query = "INSERT OR IGNORE INTO promo_usages VALUES (?, ?, ?, ?)"
+        self.cursor.execute(promo_usages_insert_query, (group, user, promo, 0))
+        self.connection.commit()
 
     def checkForExistingAttempts(self, group, user):
         """
@@ -295,10 +300,10 @@ class Database:
         :return: none
         """
         self.checkForNonExistingUser(group, user)
-        if not ("attempts" in self.database[group][user]):
-            self.database[group][user]["attempts"] = dict()
-            for item in config.ITEMS:
-                self.database[group][user]["attempts"][item] = str(datetime.datetime(2000, 1, 1))
+        for item in config.ITEMS:
+            attempt_insert_query = "INSERT OR IGNORE INTO attempts VALUES (?, ?, ?, ?)"
+            self.cursor.execute(attempt_insert_query, (group, user, item, str(datetime.datetime(2000, 1, 1))))
+        self.connection.commit()
 
     def checkForExistingBonuses(self, group, user):
         """
@@ -308,10 +313,10 @@ class Database:
         :return: none
         """
         self.checkForNonExistingUser(group, user)
-        if not ("bonuses" in self.database[group][user]):
-            self.database[group][user]["bonuses"] = dict()
-            for item in config.ITEMS:
-                self.database[group][user]["bonuses"][item] = 0
+        for item in config.ITEMS:
+            bonus_insert_query = "INSERT OR IGNORE INTO bonuses VALUES (?, ?, ?, ?)"
+            self.cursor.execute(bonus_insert_query, (group, user, item, 0))
+        self.connection.commit()
 
     def getBonus(self, group, user, item):
         """
@@ -323,7 +328,10 @@ class Database:
         """
         try:
             self.checkForExistingBonuses(group, user)
-            return self.database[group][user]["bonuses"][item]
+            select_query = "SELECT bonus FROM bonuses WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(select_query, (group, user, item))
+            res = self.cursor.fetchone()
+            return res[0] if res is not None else 0
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -338,7 +346,9 @@ class Database:
         """
         try:
             self.checkForExistingBonuses(group, user)
-            self.database[group][user]["bonuses"][item] = 0
+            update_query = "UPDATE bonuses SET bonus = 0 WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(update_query, (group, user, item))
+            self.connection.commit()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -353,9 +363,10 @@ class Database:
         """
         try:
             self.checkForNonExistingUser(group, user)
-            value = config.ITEMS_START_VALUE[item]
-            if item in self.database[group][user]:
-                value = self.database[group][user][item]
+            select_query = "SELECT size FROM dimensions WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(select_query, (group, user, item))
+            res = self.cursor.fetchone()
+            value = res[0] if res is not None else config.ITEMS_START_VALUE[item]
             return value
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
@@ -372,7 +383,9 @@ class Database:
         """
         try:
             self.checkForNonExistingUser(group, user)
-            self.database[group][user][item] = value
+            update_query = "UPDATE dimensions SET size = ? WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(update_query, (value, group, user, item))
+            self.connection.commit()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -386,13 +399,14 @@ class Database:
         :return: Время последнего изменения
         """
         try:
-            self.checkForNonExistingUser(group, user)
             self.checkForExistingAttempts(group, user)
+            select_query = "SELECT last_attempt FROM attempts WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(select_query, (group, user, item))
             attempt: datetime.datetime = datetime.datetime(2000, 1, 1)
-            if "attempts" in self.database[group][user]:
-                if item in self.database[group][user]["attempts"]:
-                    attempt = datetime.datetime.strptime(self.database[group][user]["attempts"][item],
-                                                         "%Y-%m-%d %H:%M:%S")
+            cursor_res = self.cursor.fetchone()
+            if cursor_res is not None:
+                attempt = datetime.datetime.strptime(cursor_res[0],
+                                                     "%Y-%m-%d %H:%M:%S")
             return attempt
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
@@ -407,13 +421,12 @@ class Database:
         :return: none
         """
         try:
-            self.checkForNonExistingUser(group, user)
             self.checkForExistingAttempts(group, user)
             timezone = pytz.timezone("Europe/Moscow")
             attempt: datetime.datetime = datetime.datetime.now(timezone).replace(microsecond=0).replace(tzinfo=None)
-            if "attempts" in self.database[group][user]:
-                if item in self.database[group][user]["attempts"]:
-                    self.database[group][user]["attempts"][item] = str(attempt)
+            update_query = "UPDATE attempts SET last_attempt = ? WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+            self.cursor.execute(update_query, (str(attempt), group, user, item))
+            self.connection.commit()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -427,7 +440,10 @@ class Database:
         """
         try:
             self.checkForNonExistingUser(group, user)
-            value = self.database[group][user]["current"]
+            select_query = "SELECT current FROM currents WHERE (group_id, user_id) = (?, ?)"
+            self.cursor.execute(select_query, (group, user))
+            res = self.cursor.fetchone()
+            value = res[0] if res is not None else 1
             return value
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
@@ -443,7 +459,9 @@ class Database:
         """
         try:
             self.checkForNonExistingUser(group, user)
-            self.database[group][user]["current"] = value
+            update_query = "UPDATE currents SET current = ? WHERE (group_id, user_id) = (?, ?)"
+            self.cursor.execute(update_query, (value, group, user))
+            self.connection.commit()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
@@ -456,12 +474,13 @@ class Database:
         :param amount: Количество мест, возвращаемых методом (по умолчанию возвращаются всё)
         :return: Список из первых amount мест по измерению в группе
         """
+        select_query = "SELECT user_id, size from dimensions WHERE (group_id, dimension) = (?, ?)"
+        self.cursor.execute(select_query, (group, item))
+        results = self.cursor.fetchall()
         dimensions = []
-        for user in self.database[group]:
-            dim = self.getDimension(group, user, item)
-            if dim is not None:
-                dimensions.append((dim, usernameDatabaseEntity.getUsername(user) if usernameDatabaseEntity.getUsername(
-                    user) else user))
+        for user in results:
+            dimensions.append((user[1], usernameDatabaseEntity.getUsername(user[0]) if usernameDatabaseEntity.getUsername(
+                    user[0]) else user[0]))
         dimensions.sort(reverse=config.ITEMS_SORT_DIRECTION[item])
         if amount is not None:
             return dimensions[:amount]
@@ -476,7 +495,7 @@ class Database:
         :return: Путь к сгенерированному файлу с диаграммой
         """
         topall = self.get_top(group, item)
-        group_name = groupsDatabaseEntity.getName(group) if groupsDatabaseEntity.getName(group) else group
+        group_name = groupsDatabaseEntity.getName(group) if groupsDatabaseEntity.hasGroup(group) else group
         labels = []
         sizes = []
         total = 0
@@ -516,10 +535,13 @@ class Database:
         :return: Число использований промокода
         """
         try:
-            self.checkForExistingPromoUsages(group, user)
+            self.checkForExistingPromoUsages(group, user, promo)
             val = 0
-            if promo in self.database[group][user]["promo_usages"]:
-                val = self.database[group][user]["promo_usages"][promo]
+            select_query = "SELECT use_count FROM promo_usages WHERE (group_id, user_id, promo) = (?, ?, ?)"
+            self.cursor.execute(select_query, (group, user, promo))
+            res = self.cursor.fetchone()
+            if res is not None:
+                val = res[0]
             return val
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
@@ -534,62 +556,123 @@ class Database:
         :return: Сообщение об успехе или ошибке
         """
         try:
-            self.checkForExistingPromoUsages(group, user)
+            self.checkForExistingPromoUsages(group, user, promo)
             message = ""
             success = False
-            if promo in self.database[group][user]["promo_usages"]:
-                self.database[group][user]["promo_usages"][promo] += 1
-            else:
-                self.database[group][user]["promo_usages"][promo] = 1
+            promo_usages = self.getPromoUsages(group, user, promo)
             self.checkForExistingBonuses(group, user)
-            if self.database[group][user]["promo_usages"][promo] <= promoDatabaseEntity.getPromoMaxUses(promo):
+            if promo_usages < promoDatabaseEntity.getPromoMaxUses(promo):
                 if usernameDatabaseEntity.getUserRole(user) >= promoDatabaseEntity.getPromoMinRole(promo):
-                    self.database[group][user]["bonuses"][self.getCurrent(group, user)] += promoDatabaseEntity.getPromoBonus(promo)
-                    message = "Промокод " + str(promo) + " успешно активирован. При следующей попытке роста в группе " + groupsDatabaseEntity.getName(group) + \
-                        " к измерению " + config.ITEMS_LOC[self.getCurrent(group, user)] + " будет добавлено " + str(promoDatabaseEntity.getPromoBonus(promo)) + " см.\n" \
-                        "Число использований промокода: " + str(self.database[group][user]["promo_usages"][promo]) + " / " + str(promoDatabaseEntity.getPromoMaxUses(promo))
+                    current_item = self.getCurrent(group, user)
+                    current_bonus = self.getBonus(group, user, current_item)
+                    current_bonus += promoDatabaseEntity.getPromoBonus(promo)
+                    promo_usages += 1
+
+                    update_query1 = "UPDATE bonuses SET bonus = ? WHERE (group_id, user_id, dimension) = (?, ?, ?)"
+                    self.cursor.execute(update_query1, (current_bonus, group, user, current_item))
+                    update_query2 = "UPDATE promo_usages SET use_count = ? WHERE (group_id, user_id, promo) = (?, ?, ?)"
+                    self.cursor.execute(update_query2, (promo_usages, group, user, promo))
+                    self.connection.commit()
+
+                    message = "Промокод " + str(promo) + " успешно активирован. При следующей попытке роста в группе " + str(groupsDatabaseEntity.getName(group)) + \
+                        " к измерению " + config.ITEMS_LOC[current_item] + " будет добавлено " + str(promoDatabaseEntity.getPromoBonus(promo)) + " см.\n" \
+                        "Число использований промокода: " + str(promo_usages) + " / " + str(promoDatabaseEntity.getPromoMaxUses(promo))
                     success = True
                 else:
                     message = "Этот промокод вам недоступен. Причина: ваших прав недостаточно для использования данного промокода (требуется роль " + \
                         config.ROLES[promoDatabaseEntity.getPromoMinRole(promo)][0] + " или выше)."
-                    self.database[group][user]["promo_usages"][promo] -= 1
             else:
-                self.database[group][user]["promo_usages"][promo] -= 1
                 message = "Этот промокод вам недоступен. Причина: превышено максимальное число использований (" + \
-                          str(self.database[group][user]["promo_usages"][promo]) + " / " + str(promoDatabaseEntity.getPromoMaxUses(promo)) + ")."
+                          str(promo_usages) + " / " + str(promoDatabaseEntity.getPromoMaxUses(promo)) + ")."
             return success, message
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
 
-    def readDatabase(self, location):
-        """
-        Считывает базу данных измерений
-        :param location: Путь к файлу базы данных
-        :return: none
-        """
-        try:
-            with open(location, "r", encoding="utf-8") as file:
-                self.database = json.load(file)
-        except FileNotFoundError:
-            logging.error(f"Database {location} not found!")
-        except Exception as e:
-            logging.error("An unknown error occured.\nException info is printed below.")
-            logging.error(traceback.format_exc())
-
-    def saveDatabase(self, location):
+    def closeDatabase(self):
         """
         Сохраняет базу данных измерений
-        :param location: Путь к файлу базы данных
         :return: none
         """
         try:
-            with open(location, "w", encoding="utf-8") as file:
-                json.dump(self.database, file)
-                logging.info(f"Database {location} uploaded successfully.")
+            self.cursor.close()
+            self.connection.close()
         except Exception as e:
             logging.error("An unknown error occured.\nException info is printed below.")
             logging.error(traceback.format_exc())
 
 
-databaseEntity = Database()
+databaseEntity = Database(config.DATABASE_LOC)
+
+
+class BlackListDatabase:
+    """
+        Класс базы данных о заблокированных пользователях, причинах и длительности бана
+        """
+    location = ""
+
+    def __init__(self, location):
+        self.location = location
+        try:
+            self.connection = sqlite3.connect(location)
+            self.cursor = self.connection.cursor()
+        except Exception as e:
+            logging.error("An unknown error occured.\nException info is printed below.")
+            logging.error(traceback.format_exc())
+
+    def closeDatabase(self):
+        """
+        Сохраняет базу данных групп
+        :return: none
+        """
+        try:
+            self.cursor.close()
+            self.connection.close()
+        except Exception as e:
+            logging.error("An unknown error occured.\nException info is printed below.")
+            logging.error(traceback.format_exc())
+
+    def append(self, user_id, reason="Причина не указана", duration=None):
+        """
+        Добавляет запись о новом заблокированном пользователе или обновляет существующую
+        :param user_id: ИД пользователя
+        :param reason: Причина бана. Если не указана, то будет подставлена причина по умолчанию.
+        :param duration: Длительность бана в днях. Если не указана, считается вечным баном
+        :return: none
+        """
+        unban_date = None
+        if duration is not None:
+            timezone = pytz.timezone("Europe/Moscow")
+            unban_date = datetime.datetime.now(tz=timezone)
+            delta = datetime.timedelta(days=duration)
+            unban_date += delta
+            unban_date = unban_date.replace(microsecond=0, tzinfo=None)
+
+        insert_query = "INSERT OR REPLACE INTO black_list (user_id, reason, unban_date) VALUES (?, ?, ?)"
+        data = (user_id, reason, str(unban_date))
+        self.cursor.execute(insert_query, data)
+        self.connection.commit()
+
+    def hasUser(self, user_id):
+        select_query = "SELECT * FROM black_list WHERE user_id = (?)"
+        self.cursor.execute(select_query, (user_id,))
+        res = self.cursor.fetchone()
+        return res is not None
+
+    def unban(self, user_id):
+        if not self.hasUser(user_id):
+            return
+        delete_query = "DELETE FROM black_list WHERE user_id = (?)"
+        self.cursor.execute(delete_query, (user_id, ))
+        self.connection.commit()
+
+    def getUser(self, user_id):
+        if not self.hasUser(user_id):
+            return
+        select_query = "SELECT * FROM black_list WHERE user_id = (?)"
+        self.cursor.execute(select_query, (user_id,))
+        res = self.cursor.fetchone()
+        return res
+
+
+blacklistDatabaseEntity = BlackListDatabase(config.DATABASE_LOC)
